@@ -24,9 +24,10 @@ final class NativeNotchPanelController {
     }
 
     private func makePanel(for screen: NSScreen) -> NSPanel {
-        let width: CGFloat = min(1100, screen.frame.width - 80)
+        let metrics = metrics(for: screen)
+        let width = metrics.width
         let height: CGFloat = 92
-        let frame = NSRect(x: screen.frame.midX - width / 2, y: screen.frame.maxY - height, width: width, height: height)
+        let frame = NSRect(x: metrics.originX, y: screen.frame.maxY - height, width: width, height: height)
         let panel = NSPanel(contentRect: frame, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         panel.isOpaque = false
         panel.backgroundColor = .clear
@@ -35,7 +36,7 @@ final class NativeNotchPanelController {
         panel.hasShadow = false
         panel.ignoresMouseEvents = false
         panel.isMovableByWindowBackground = false
-        let view = NativeNotchRailView(frame: NSRect(origin: .zero, size: frame.size))
+        let view = NativeNotchRailView(frame: NSRect(origin: .zero, size: frame.size), notchWidth: metrics.notchWidth)
         view.onToggle = { [weak self, weak panel] in
             guard let self, let panel else { return }
             self.toggle(panel: panel, screen: screen)
@@ -50,8 +51,8 @@ final class NativeNotchPanelController {
             view.update(title: title(), subtitle: subtitle(), schedule: schedule(), weather: weather())
             view.needsDisplay = true
             if let screen = NSScreen.screens.first(where: { ObjectIdentifier($0) == id }) {
-                let width = panel.frame.width
-                panel.setFrameOrigin(NSPoint(x: screen.frame.midX - width / 2, y: screen.frame.maxY - panel.frame.height))
+                let metrics = metrics(for: screen)
+                panel.setFrame(NSRect(x: metrics.originX, y: screen.frame.maxY - panel.frame.height, width: metrics.width, height: panel.frame.height), display: false)
             }
         }
     }
@@ -60,10 +61,20 @@ final class NativeNotchPanelController {
         let id = ObjectIdentifier(screen)
         if expanded.contains(id) { expanded.remove(id) } else { expanded.insert(id) }
         let height: CGFloat = expanded.contains(id) ? 360 : 92
-        let width = panel.frame.width
-        panel.setFrame(NSRect(x: screen.frame.midX - width / 2, y: screen.frame.maxY - height, width: width, height: height), display: true, animate: true)
+        let metrics = metrics(for: screen)
+        panel.setFrame(NSRect(x: metrics.originX, y: screen.frame.maxY - height, width: metrics.width, height: height), display: true, animate: true)
         (panel.contentView as? NativeNotchRailView)?.isExpanded = expanded.contains(id)
         panel.contentView?.needsDisplay = true
+    }
+
+    private func metrics(for screen: NSScreen) -> (originX: CGFloat, width: CGFloat, notchWidth: CGFloat) {
+        let left = screen.auxiliaryTopLeftArea?.maxX ?? (screen.frame.midX - 110)
+        let right = screen.auxiliaryTopRightArea?.minX ?? (screen.frame.midX + 110)
+        let notchWidth = max(180, right - left)
+        let wing: CGFloat = 250
+        let width = min(screen.frame.width - 24, notchWidth + wing * 2)
+        let originX = max(screen.frame.minX + 12, min(left - wing, screen.frame.maxX - width - 12))
+        return (originX, width, notchWidth)
     }
 
     private func title() -> String {
@@ -97,8 +108,16 @@ private final class NativeNotchRailView: NSView {
     private var subtitleText = "Mendapatkan waktu solat…"
     private var schedule: DailyPrayerTimes?
     private var weatherText: String?
+    private let notchWidth: CGFloat
     var isExpanded = false
     var onToggle: (() -> Void)?
+
+    init(frame frameRect: NSRect, notchWidth: CGFloat) {
+        self.notchWidth = notchWidth
+        super.init(frame: frameRect)
+    }
+
+    required init?(coder: NSCoder) { return nil }
 
     func update(title: String, subtitle: String, schedule: DailyPrayerTimes?, weather: String?) {
         titleText = title
@@ -111,7 +130,7 @@ private final class NativeNotchRailView: NSView {
         NSColor.black.setFill()
         bounds.fill()
         if isExpanded { drawExpanded(); return }
-        let centerGap: CGFloat = 180
+        let centerGap = notchWidth
         let wingWidth = (bounds.width - centerGap) / 2
         let left = NSBezierPath(roundedRect: NSRect(x: 0, y: 0, width: wingWidth, height: bounds.height), xRadius: 18, yRadius: 18)
         NSGradient(colors: [NSColor.systemPink.withAlphaComponent(0.82), NSColor.systemBlue.withAlphaComponent(0.55), .clear])?.draw(in: left, angle: 0)
