@@ -26,7 +26,7 @@ final class NativeNotchPanelController {
     private func makePanel(for screen: NSScreen) -> NSPanel {
         let metrics = metrics(for: screen)
         let width = metrics.width
-        let height: CGFloat = 56
+        let height: CGFloat = 42
         let frame = NSRect(x: metrics.originX, y: screen.frame.maxY - height, width: width, height: height)
         let panel = NSPanel(contentRect: frame, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         panel.isOpaque = false
@@ -60,7 +60,7 @@ final class NativeNotchPanelController {
     private func toggle(panel: NSPanel, screen: NSScreen) {
         let id = ObjectIdentifier(screen)
         if expanded.contains(id) { expanded.remove(id) } else { expanded.insert(id) }
-        let height: CGFloat = expanded.contains(id) ? 320 : 56
+        let height: CGFloat = expanded.contains(id) ? 320 : 42
         let metrics = metrics(for: screen)
         panel.setFrame(NSRect(x: metrics.originX, y: screen.frame.maxY - height, width: metrics.width, height: height), display: true, animate: true)
         (panel.contentView as? NativeNotchRailView)?.isExpanded = expanded.contains(id)
@@ -71,7 +71,7 @@ final class NativeNotchPanelController {
         let left = screen.auxiliaryTopLeftArea?.maxX ?? (screen.frame.midX - 110)
         let right = screen.auxiliaryTopRightArea?.minX ?? (screen.frame.midX + 110)
         let notchWidth = max(180, right - left)
-        let wing: CGFloat = 150
+        let wing: CGFloat = 120
         let width = min(screen.frame.width - 24, notchWidth + wing * 2)
         let originX = max(screen.frame.minX + 12, min(left - wing, screen.frame.maxX - width - 12))
         return (originX, width, notchWidth)
@@ -79,9 +79,9 @@ final class NativeNotchPanelController {
 
     private func title() -> String {
         switch store.state {
-        case .needsZone: return "Pilih zon waktu solat"
-        case .loading: return "Mendapatkan waktu solat…"
-        case .failed: return "Waktu solat tidak dapat dikemas kini"
+        case .needsZone: return "Pilih zon"
+        case .loading: return "Muat…"
+        case .failed: return "Ralat"
         case .loaded(_, let timeline): return "\(timeline.next.shortName)  \(timeline.next.malayName)"
         }
     }
@@ -136,9 +136,10 @@ private final class NativeNotchRailView: NSView {
         NSGradient(colors: [NSColor.systemPink.withAlphaComponent(0.82), NSColor.systemBlue.withAlphaComponent(0.55), .clear])?.draw(in: left, angle: 0)
         let right = NSBezierPath(roundedRect: NSRect(x: wingWidth + centerGap, y: 0, width: wingWidth, height: bounds.height), xRadius: 18, yRadius: 18)
         NSGradient(colors: [.clear, NSColor.systemBlue.withAlphaComponent(0.55), NSColor.systemPink.withAlphaComponent(0.82)])?.draw(in: right, angle: 0)
-        let attrs: [NSAttributedString.Key: Any] = [.foregroundColor: NSColor.white, .font: NSFont.systemFont(ofSize: 14, weight: .semibold)]
-        (titleText as NSString).draw(at: NSPoint(x: 32, y: bounds.midY - 8), withAttributes: attrs)
-        (subtitleText as NSString).draw(at: NSPoint(x: bounds.width - 230, y: bounds.midY - 8), withAttributes: attrs)
+        let attrs: [NSAttributedString.Key: Any] = [.foregroundColor: NSColor.white, .font: NSFont.systemFont(ofSize: 12, weight: .semibold)]
+        let centre = bounds.midX
+        (titleText as NSString).draw(at: NSPoint(x: centre - notchWidth / 2 + 16, y: bounds.midY - 7), withAttributes: attrs)
+        (subtitleText as NSString).draw(at: NSPoint(x: centre + notchWidth / 2 - 58, y: bounds.midY - 7), withAttributes: attrs)
     }
 
     override func mouseDown(with event: NSEvent) { onToggle?() }
