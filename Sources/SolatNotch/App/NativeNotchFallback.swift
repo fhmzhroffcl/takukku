@@ -9,12 +9,12 @@ final class NativeNotchFallback {
         for screen in screens {
             let id = ObjectIdentifier(screen)
             let frame = screen.frame
-            let width: CGFloat = 360
-            let height: CGFloat = 42
+            let width: CGFloat = 520
+            let height: CGFloat = 36
             let x = frame.midX - width / 2
-            // Leave the hardware/menu-bar notch clear; the panel belongs just
-            // below it rather than underneath the display cut-out.
-            let y = frame.maxY - 48 - height
+            // Sit directly on the menu-bar edge so the black centre disappears
+            // into the physical MacBook notch, like BoringNotch/NotchNook.
+            let y = frame.maxY - height
             let panel = panels[id] ?? makePanel(frame: NSRect(x: x, y: y, width: width, height: height))
             panel.setFrame(NSRect(x: x, y: y, width: width, height: height), display: true)
             panel.orderFrontRegardless()
@@ -30,21 +30,26 @@ final class NativeNotchFallback {
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
         panel.hasShadow = false
 
-        let visual = NSVisualEffectView(frame: NSRect(origin: .zero, size: frame.size))
-        visual.material = .hudWindow
-        visual.blendingMode = .behindWindow
-        visual.state = .active
-        visual.wantsLayer = true
-        visual.layer?.cornerRadius = 21
-        visual.layer?.backgroundColor = NSColor.black.withAlphaComponent(0.94).cgColor
+        let visual = NotchRailView(frame: NSRect(origin: .zero, size: frame.size))
 
         let label = NSTextField(labelWithString: "☾  SOL  ·  Waktu solat sedang dimuat")
         label.textColor = .white
         label.font = .systemFont(ofSize: 13, weight: .medium)
         label.alignment = .center
-        label.frame = NSRect(x: 12, y: 11, width: frame.width - 24, height: 20)
+        label.frame = NSRect(x: 28, y: 8, width: frame.width - 56, height: 20)
         visual.addSubview(label)
         panel.contentView = visual
         return panel
+    }
+}
+
+private final class NotchRailView: NSView {
+    override func draw(_ dirtyRect: NSRect) {
+        let left = NSBezierPath(roundedRect: NSRect(x: 0, y: 0, width: bounds.width / 2 + 48, height: bounds.height), xRadius: 18, yRadius: 18)
+        NSGradient(colors: [NSColor.systemBlue.withAlphaComponent(0.85), NSColor.systemPurple.withAlphaComponent(0.35), .clear])?.draw(in: left, angle: 0)
+        let right = NSBezierPath(roundedRect: NSRect(x: bounds.width / 2 - 48, y: 0, width: bounds.width / 2 + 48, height: bounds.height), xRadius: 18, yRadius: 18)
+        NSGradient(colors: [.clear, NSColor.systemPurple.withAlphaComponent(0.35), NSColor.systemBlue.withAlphaComponent(0.85)])?.draw(in: right, angle: 0)
+        NSColor.black.setFill()
+        NSBezierPath(roundedRect: NSRect(x: bounds.midX - 72, y: 0, width: 144, height: bounds.height), xRadius: 18, yRadius: 18).fill()
     }
 }
