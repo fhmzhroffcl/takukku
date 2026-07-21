@@ -12,7 +12,9 @@ final class NativeNotchFallback {
             let width: CGFloat = 360
             let height: CGFloat = 42
             let x = frame.midX - width / 2
-            let y = frame.maxY - height - 2
+            // Leave the hardware/menu-bar notch clear; the panel belongs just
+            // below it rather than underneath the display cut-out.
+            let y = frame.maxY - 48 - height
             let panel = panels[id] ?? makePanel(frame: NSRect(x: x, y: y, width: width, height: height))
             panel.setFrame(NSRect(x: x, y: y, width: width, height: height), display: true)
             panel.orderFrontRegardless()
