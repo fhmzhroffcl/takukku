@@ -35,6 +35,7 @@ final class NativeNotchPanelController {
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
         panel.hasShadow = false
         panel.ignoresMouseEvents = false
+        panel.acceptsMouseMovedEvents = true
         panel.isMovableByWindowBackground = false
         let view = NativeNotchRailView(frame: NSRect(origin: .zero, size: frame.size), notchWidth: metrics.notchWidth)
         view.onToggle = { [weak self, weak panel] in
