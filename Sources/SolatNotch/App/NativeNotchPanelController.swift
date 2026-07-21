@@ -31,7 +31,7 @@ final class NativeNotchPanelController {
         let panel = NSPanel(contentRect: frame, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         panel.isOpaque = false
         panel.backgroundColor = .clear
-        panel.level = .statusBar
+        panel.level = .screenSaver
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
         panel.hasShadow = false
         panel.ignoresMouseEvents = false
