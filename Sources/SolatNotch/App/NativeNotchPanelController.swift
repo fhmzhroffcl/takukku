@@ -26,7 +26,7 @@ final class NativeNotchPanelController {
     private func makePanel(for screen: NSScreen) -> NSPanel {
         let metrics = metrics(for: screen)
         let width = metrics.width
-        let height: CGFloat = 92
+        let height: CGFloat = 56
         let frame = NSRect(x: metrics.originX, y: screen.frame.maxY - height, width: width, height: height)
         let panel = NSPanel(contentRect: frame, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         panel.isOpaque = false
@@ -60,7 +60,7 @@ final class NativeNotchPanelController {
     private func toggle(panel: NSPanel, screen: NSScreen) {
         let id = ObjectIdentifier(screen)
         if expanded.contains(id) { expanded.remove(id) } else { expanded.insert(id) }
-        let height: CGFloat = expanded.contains(id) ? 360 : 92
+        let height: CGFloat = expanded.contains(id) ? 320 : 56
         let metrics = metrics(for: screen)
         panel.setFrame(NSRect(x: metrics.originX, y: screen.frame.maxY - height, width: metrics.width, height: height), display: true, animate: true)
         (panel.contentView as? NativeNotchRailView)?.isExpanded = expanded.contains(id)
@@ -71,7 +71,7 @@ final class NativeNotchPanelController {
         let left = screen.auxiliaryTopLeftArea?.maxX ?? (screen.frame.midX - 110)
         let right = screen.auxiliaryTopRightArea?.minX ?? (screen.frame.midX + 110)
         let notchWidth = max(180, right - left)
-        let wing: CGFloat = 250
+        let wing: CGFloat = 150
         let width = min(screen.frame.width - 24, notchWidth + wing * 2)
         let originX = max(screen.frame.minX + 12, min(left - wing, screen.frame.maxX - width - 12))
         return (originX, width, notchWidth)
