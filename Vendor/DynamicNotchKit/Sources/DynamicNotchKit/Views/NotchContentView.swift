@@ -38,25 +38,14 @@ struct NotchContentView<Expanded, CompactLeading, CompactTrailing>: View where E
     }
 
     var body: some View {
-        ZStack {
-            if style.isNotch {
-                NotchView(dynamicNotch: dynamicNotch)
-                    .foregroundStyle(.white)
-            } else {
-                NotchlessView(dynamicNotch: dynamicNotch)
-            }
+        Group {
+        if style.isNotch {
+            NotchView(dynamicNotch: dynamicNotch)
+        } else {
+            NotchlessView(dynamicNotch: dynamicNotch)
         }
-        .shadow(
-            color: .black.opacity(shadowOpacity),
-            radius: shadowRadius
-        )
+        }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         .environment(\.notchStyle, style)
-        .animation(.snappy(duration: 0.4), value: dynamicNotch.isHovering)
-        .onAppear {
-            if dynamicNotch.namespace == nil {
-                dynamicNotch.namespace = namespace
-            }
-        }
     }
 }
