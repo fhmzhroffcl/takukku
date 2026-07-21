@@ -16,6 +16,7 @@ final class AppRuntime {
         guard !started else { return }
         started = true
         store.start()
+        NativeNotchFallback.shared.show()
         // Keep startup reliable on macOS 26 while the DynamicNotchKit panel
         // is being replaced with the native panel path. The menu-bar app and
         // settings remain available immediately; the notch is created only
