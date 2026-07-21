@@ -26,7 +26,7 @@ final class NativeNotchPanelController {
     private func makePanel(for screen: NSScreen) -> NSPanel {
         let metrics = metrics(for: screen)
         let width = metrics.width
-        let height: CGFloat = 42
+        let height: CGFloat = 78
         let frame = NSRect(x: metrics.originX, y: screen.frame.maxY - height, width: width, height: height)
         let panel = NSPanel(contentRect: frame, styleMask: [.borderless, .nonactivatingPanel], backing: .buffered, defer: false)
         panel.isOpaque = false
@@ -61,7 +61,7 @@ final class NativeNotchPanelController {
     private func toggle(panel: NSPanel, screen: NSScreen) {
         let id = ObjectIdentifier(screen)
         if expanded.contains(id) { expanded.remove(id) } else { expanded.insert(id) }
-        let height: CGFloat = expanded.contains(id) ? 320 : 42
+        let height: CGFloat = expanded.contains(id) ? 320 : 78
         let metrics = metrics(for: screen)
         panel.setFrame(NSRect(x: metrics.originX, y: screen.frame.maxY - height, width: metrics.width, height: height), display: true, animate: true)
         (panel.contentView as? NativeNotchRailView)?.isExpanded = expanded.contains(id)
@@ -72,9 +72,9 @@ final class NativeNotchPanelController {
         let left = screen.auxiliaryTopLeftArea?.maxX ?? (screen.frame.midX - 110)
         let right = screen.auxiliaryTopRightArea?.minX ?? (screen.frame.midX + 110)
         let notchWidth = max(180, right - left)
-        let wing: CGFloat = 120
-        let width = min(screen.frame.width - 24, notchWidth + wing * 2)
-        let originX = max(screen.frame.minX + 12, min(left - wing, screen.frame.maxX - width - 12))
+        let wing: CGFloat = 240
+        let width = screen.frame.width
+        let originX = screen.frame.minX
         return (originX, width, notchWidth)
     }
 
@@ -132,10 +132,10 @@ private final class NativeNotchRailView: NSView {
         bounds.fill()
         if isExpanded { drawExpanded(); return }
         let centerGap = notchWidth
-        let wingWidth = (bounds.width - centerGap) / 2
+        let wingWidth = min(240, (bounds.width - centerGap) / 2)
         let left = NSBezierPath(roundedRect: NSRect(x: 0, y: 0, width: wingWidth, height: bounds.height), xRadius: 18, yRadius: 18)
         NSGradient(colors: [NSColor.systemPink.withAlphaComponent(0.82), NSColor.systemBlue.withAlphaComponent(0.55), .clear])?.draw(in: left, angle: 0)
-        let right = NSBezierPath(roundedRect: NSRect(x: wingWidth + centerGap, y: 0, width: wingWidth, height: bounds.height), xRadius: 18, yRadius: 18)
+        let right = NSBezierPath(roundedRect: NSRect(x: bounds.width - wingWidth, y: 0, width: wingWidth, height: bounds.height), xRadius: 18, yRadius: 18)
         NSGradient(colors: [.clear, NSColor.systemBlue.withAlphaComponent(0.55), NSColor.systemPink.withAlphaComponent(0.82)])?.draw(in: right, angle: 0)
         let attrs: [NSAttributedString.Key: Any] = [.foregroundColor: NSColor.white, .font: NSFont.systemFont(ofSize: 12, weight: .semibold)]
         let centre = bounds.midX
