@@ -27,7 +27,9 @@ struct SolatNotchApp: App {
     }
     var body: some Scene {
         MenuBarExtra("Solat Notch", systemImage: "moon.stars.fill") {
-            MenuBarContent(store: store, coordinator: coordinator)
+            // Keep the initial menu-bar scene deliberately lightweight. The
+            // full controls are opened after startup from the native menu.
+            Text("Solat Notch sedang berjalan")
         }
         WindowGroup("Tetapan Solat Notch", id: "settings") {
             SettingsView(store: store)
