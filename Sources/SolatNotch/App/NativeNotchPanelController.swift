@@ -4,6 +4,7 @@ import AppKit
 final class NativeNotchPanelController {
     private let store: AppStore
     private var panels: [ObjectIdentifier: NSPanel] = [:]
+    private var expanded: Set<ObjectIdentifier> = []
     private var timer: Timer?
 
     init(store: AppStore) { self.store = store }
@@ -32,8 +33,13 @@ final class NativeNotchPanelController {
         panel.level = .statusBar
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
         panel.hasShadow = false
-        panel.ignoresMouseEvents = true
+        panel.ignoresMouseEvents = false
+        panel.isMovableByWindowBackground = false
         let view = NativeNotchRailView(frame: NSRect(origin: .zero, size: frame.size))
+        view.onToggle = { [weak self, weak panel] in
+            guard let self, let panel else { return }
+            self.toggle(panel: panel, screen: screen)
+        }
         panel.contentView = view
         return panel
     }
@@ -41,13 +47,23 @@ final class NativeNotchPanelController {
     private func refresh() {
         for (id, panel) in panels {
             guard let view = panel.contentView as? NativeNotchRailView else { continue }
-            view.update(title: title(), subtitle: subtitle())
+            view.update(title: title(), subtitle: subtitle(), schedule: schedule(), weather: weather())
             view.needsDisplay = true
             if let screen = NSScreen.screens.first(where: { ObjectIdentifier($0) == id }) {
                 let width = panel.frame.width
                 panel.setFrameOrigin(NSPoint(x: screen.frame.midX - width / 2, y: screen.frame.maxY - panel.frame.height))
             }
         }
+    }
+
+    private func toggle(panel: NSPanel, screen: NSScreen) {
+        let id = ObjectIdentifier(screen)
+        if expanded.contains(id) { expanded.remove(id) } else { expanded.insert(id) }
+        let height: CGFloat = expanded.contains(id) ? 360 : 92
+        let width = panel.frame.width
+        panel.setFrame(NSRect(x: screen.frame.midX - width / 2, y: screen.frame.maxY - height, width: width, height: height), display: true, animate: true)
+        (panel.contentView as? NativeNotchRailView)?.isExpanded = expanded.contains(id)
+        panel.contentView?.needsDisplay = true
     }
 
     private func title() -> String {
@@ -64,20 +80,37 @@ final class NativeNotchPanelController {
         let remaining = max(0, Int(timeline.nextDate.timeIntervalSinceNow))
         return String(format: "%02dj %02dm", remaining / 3600, (remaining % 3600) / 60)
     }
+
+    private func schedule() -> DailyPrayerTimes? {
+        if case .loaded(let schedule, _) = store.state { return schedule }
+        return store.lastSchedule
+    }
+
+    private func weather() -> String? {
+        guard let weather = store.weather else { return nil }
+        return "\(Int(weather.temperature.rounded()))°"
+    }
 }
 
 private final class NativeNotchRailView: NSView {
     private var titleText = "Solat Notch"
     private var subtitleText = "Mendapatkan waktu solat…"
+    private var schedule: DailyPrayerTimes?
+    private var weatherText: String?
+    var isExpanded = false
+    var onToggle: (() -> Void)?
 
-    func update(title: String, subtitle: String) {
+    func update(title: String, subtitle: String, schedule: DailyPrayerTimes?, weather: String?) {
         titleText = title
         subtitleText = subtitle
+        self.schedule = schedule
+        weatherText = weather
     }
 
     override func draw(_ dirtyRect: NSRect) {
         NSColor.black.setFill()
         bounds.fill()
+        if isExpanded { drawExpanded(); return }
         let centerGap: CGFloat = 180
         let wingWidth = (bounds.width - centerGap) / 2
         let left = NSBezierPath(roundedRect: NSRect(x: 0, y: 0, width: wingWidth, height: bounds.height), xRadius: 18, yRadius: 18)
@@ -87,5 +120,31 @@ private final class NativeNotchRailView: NSView {
         let attrs: [NSAttributedString.Key: Any] = [.foregroundColor: NSColor.white, .font: NSFont.systemFont(ofSize: 14, weight: .semibold)]
         (titleText as NSString).draw(at: NSPoint(x: 32, y: bounds.midY - 8), withAttributes: attrs)
         (subtitleText as NSString).draw(at: NSPoint(x: bounds.width - 230, y: bounds.midY - 8), withAttributes: attrs)
+    }
+
+    override func mouseDown(with event: NSEvent) { onToggle?() }
+
+    private func drawExpanded() {
+        let gradient = NSGradient(colors: [NSColor.black, NSColor(calibratedRed: 0.02, green: 0.12, blue: 0.35, alpha: 1), NSColor(calibratedRed: 0.02, green: 0.42, blue: 0.85, alpha: 1)])
+        gradient?.draw(in: NSRect(x: 0, y: 0, width: bounds.width, height: bounds.height), angle: 90)
+        let attrs: [NSAttributedString.Key: Any] = [.foregroundColor: NSColor.white, .font: NSFont.systemFont(ofSize: 16, weight: .semibold)]
+        (titleText as NSString).draw(at: NSPoint(x: 34, y: bounds.height - 58), withAttributes: attrs)
+        if let weatherText { (weatherText as NSString).draw(at: NSPoint(x: bounds.width - 100, y: bounds.height - 58), withAttributes: attrs) }
+        let arc = NSBezierPath()
+        arc.move(to: NSPoint(x: 42, y: 105))
+        arc.curve(to: NSPoint(x: bounds.width - 42, y: 105), controlPoint1: NSPoint(x: bounds.width * 0.25, y: 230), controlPoint2: NSPoint(x: bounds.width * 0.75, y: 230))
+        NSColor.systemBlue.withAlphaComponent(0.75).setStroke(); arc.lineWidth = 1.5; arc.stroke()
+        guard let schedule else { return }
+        let prayers = Prayer.allCases
+        let step = (bounds.width - 100) / CGFloat(prayers.count - 1)
+        let small: [NSAttributedString.Key: Any] = [.foregroundColor: NSColor.white, .font: NSFont.systemFont(ofSize: 12, weight: .medium)]
+        for (index, prayer) in prayers.enumerated() {
+            let x = 50 + CGFloat(index) * step
+            let name = prayer.shortName as NSString
+            name.draw(at: NSPoint(x: x - 15, y: 65), withAttributes: small)
+            if let date = schedule[prayer] { (TimeFormatter.string(date) as NSString).draw(at: NSPoint(x: x - 28, y: 44), withAttributes: small) }
+        }
+        let source = "JAKIM melalui Waktu Solat API · \(schedule.zoneCode)" as NSString
+        source.draw(at: NSPoint(x: 34, y: 18), withAttributes: [.foregroundColor: NSColor.white.withAlphaComponent(0.65), .font: NSFont.systemFont(ofSize: 11)])
     }
 }
